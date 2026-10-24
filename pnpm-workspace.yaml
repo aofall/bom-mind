@@ -1,0 +1,4 @@
+storeDir: work/pnpm-store
+cacheDir: work/pnpm-cache
+allowBuilds:
+  esbuild: true
