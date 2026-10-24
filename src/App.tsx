@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { AlertCircle, ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpRight, Box, Boxes, Check, ChevronDown, ChevronRight, CircleHelp, FileJson, FileSpreadsheet, FileText, FolderOpen, GitBranch, Layers3, ListTree, LoaderCircle, Maximize2, Minus, PanelLeftClose, PanelRightClose, Plus, Search, ShieldCheck, Sparkles, Upload, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { BomGraph, type GraphHandle } from './components/BomGraph';
+import ParserWorker from './worker?worker';
 import { ancestry, deserializeProject, quantityLabel, serializeProject } from './core/parser';
 import { buildSvg, download, exportText, nodeKind, safeFileName, svgToPng, visibleNodeIds } from './core/export';
 import { makeDemo } from './core/demo';
@@ -101,7 +102,7 @@ function App() {
       }
       if (!/\.xlsx?$/i.test(file.name)) throw new Error('请选择 .xls、.xlsx 或 BOM Mind 导出的 .json 文件');
       setBusy('正在读取文件…');
-      const parser = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' }); worker.current = parser;
+      const parser = new ParserWorker(); worker.current = parser;
       parser.onerror = () => { setError('文件读取失败，请检查文件格式后重新导入'); setBusy(''); parser.terminate(); };
       parser.onmessage = event => {
         const data = event.data;

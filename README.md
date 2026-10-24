@@ -25,6 +25,16 @@ pnpm build
 pnpm preview
 ```
 
+普通构建输出到 `dist/`，使用相对资源路径，适合通过 HTTP/HTTPS 部署或本地预览；仍使用 ES 模块，不用于直接双击 HTML。
+
+如需不启动本地服务，直接打开文件：
+
+```text
+pnpm run build-legacy
+```
+
+构建后双击 `dist-legacy/index.html`，分发时保留整个 `dist-legacy/` 目录。此构建使用普通 IIFE 脚本和内联 Blob Worker，避免从 `file://` 加载 ES 模块及外部 Worker；不需要联网或安装 Node 即可使用已构建的工具。`legacy` 指本地文件加载方式，目标仍是现代 Chrome、Edge，不代表支持 IE。浏览器对本地文件的存储策略可能不同，重要项目请导出 JSON 备份。两种构建的输出目录互不覆盖。
+
 ## 使用
 
 1. 选择完整的 Excel BOM，确认工作表、表头行与字段映射。
