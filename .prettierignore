@@ -1,0 +1,15 @@
+node_modules/
+dist/
+dist-legacy/
+work/
+outputs/
+docs/
+.git/
+.idea/
+.openai/
+.sites-runtime/
+.env
+.env.*
+pnpm-lock.yaml
+*.tsbuildinfo
+*.zip

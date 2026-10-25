@@ -10,7 +10,7 @@ Windows 可使用快速启动脚本：
 .\start.ps1
 ```
 
-或使用 Node.js 22+ 与 pnpm 11：
+或使用 Node.js 22.x（至少 22.13）或 24+，配合 pnpm 11：
 
 ```text
 pnpm install
@@ -42,6 +42,8 @@ pnpm run build-legacy
 3. 可展开到指定层级、查找当前产品内的材料，并定位数据提示。
 4. 导出 PNG、SVG、缩进文本，或 JSON 项目。JSON 包含全部产品，可重新导入恢复。
 5. “记住项目”仅将项目保存在当前浏览器的 IndexedDB；关闭该选项可清除本地保存的最近项目。换设备需要原始 Excel 或导出的 JSON。
+6. 产品目录使用虚拟滚动，可浏览全部产品。勾选产品后，“全选搜索结果”选择全部匹配项（包括未滚动到的产品），“选择全部产品”覆盖整个项目；搜索、滚动和切换产品保留已选项，导入新项目清空选择。
+7. 点击“批量导出”可下载已选产品目录 CSV，或按产品生成完整 SVG、PNG、缩进文本并打成 ZIP。每包包含目录和成功/失败记录；按约 32 MiB 未压缩文件大小分包（单个文件不拆分），下载当前包后继续下一包，避免大量图片同时占用内存。取消后已下载的包仍可使用。JSON 仍是完整项目备份，不受产品勾选影响。
 
 ## 层级规则
 
@@ -66,9 +68,13 @@ Excel 在 Web Worker 中解析，文件内容不上传服务器。站点不接�
 ```text
 src/core/parser.ts       层级解析、字段识别、JSON 往返校验
 src/core/export.ts       SVG / PNG / 文本导出
+src/core/product-export.ts 单项与批量共用的产品文件生成
+src/core/mapping.ts      字段映射计数与校验
 src/core/storage.ts      浏览器本地保存
 src/worker.ts            Excel 后台解析
 src/components/          交互结构图
+src/components/Modal.tsx 弹窗关闭、键盘与焦点管理
+src/components/*Dialog.tsx 各导入、导出、异常和帮助弹窗
 src/App.tsx              导入、检索、详情、异常和导出页面
 tests/                  核心边界测试
 scripts/check-real.ts   实际附件全量核对
@@ -80,3 +86,31 @@ dist/                   生产静态文件（由构建生成）
 实际附件存在 `work/实际BOM.xls` 时，运行 `pnpm test:real` 进行全量核对。该测试核对产品、明细、材料代码、材料层次、空数量，并独立检查全部父子关系和 JSON 往返。耗时包含独立校验，不代表浏览器导入耗时。
 
 SheetJS 使用官方分发的 0.20.3 包；其他依赖以 `pnpm-lock.yaml` 锁定。正式升级依赖后应重新运行核心测试与实际附件检查。
+
+## 代码格式
+
+使用项目内的 Prettier 配置，缩进 2 个空格，建议行宽 100 个字符。每条逻辑语句独立成行，独立状态和变量分别声明；有多步操作的回调、条件分支及 JSX 结构分行展开。简短的提前返回或简单表达式可保持紧凑。长字符串、SVG 属性等不为满足行宽而改变其内容。
+
+```text
+pnpm format
+pnpm format:check
+```
+
+格式化范围覆盖源码、测试、检查脚本、配置和项目说明，排除构建产物、第三方依赖、本地真实数据及工作目录。PowerShell 启动脚本手工保持多行结构，使用 4 个空格缩进。WebStorm 可选择本项目的 Prettier，并启用重新格式化或保存时运行；编辑器通用缩进规则由 `.editorconfig` 提供。
+
+## 代码检查
+
+Prettier 负责排版；ESLint 负责 TypeScript、React Hooks 和可维护性约束；Stylelint 使用错误检测规则，检查未知属性、无效值、重复声明及已废弃属性。不同组件共享 `span`、`svg`、`button` 等末级标签，优先级排序规则会把互不相关的组件也进行比较，因此有说明地关闭 `no-descending-specificity`，保留组件及响应式覆盖顺序。ESLint 通过 `eslint-config-prettier` 避免重复检查格式，仅额外保留独立变量声明、跨行分支花括号和每行最多一条语句等约束。
+
+```text
+pnpm check          # 格式、ESLint、Stylelint、TypeScript、单元测试
+pnpm lint           # TypeScript / React 检查，警告也会阻止通过
+pnpm lint:css       # CSS 检查
+pnpm typecheck      # TypeScript 类型与未使用声明检查
+pnpm lint:fix       # 修复 ESLint 可安全自动修复的问题
+pnpm lint:css:fix   # 修复 Stylelint 可自动修复的问题
+```
+
+自动修复后运行 `pnpm format`，再运行 `pnpm check`。`tsconfig.json` 同时启用未使用局部声明和参数检查，因此 `build`、`build-legacy` 也会阻止残留的未使用 import。ESLint 的 Hooks 检查覆盖调用顺序及依赖数组；当前项目未启用 React Compiler，不额外启用编译器迁移规则。文件名过滤需要匹配 Windows 禁止的控制字符，保留这一处有说明的局部正则规则豁免。
+
+提交前执行 `pnpm check`。GitHub Actions 配置位于 `.github/workflows/check.yml`，推送或创建拉取请求后使用 Node.js 24 和 `package.json` 锁定的 pnpm，依次执行锁文件安装、`pnpm check` 及两种构建。真实 BOM 仅在本地存在时执行 `pnpm test:real`，不上传到 CI。

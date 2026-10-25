@@ -1,0 +1,45 @@
+name: Code checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Set up pnpm from package.json
+        uses: pnpm/action-setup@v6
+        with:
+          cache: true
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting, code, styles, types and tests
+        run: pnpm check
+
+      - name: Build web version
+        run: pnpm build
+
+      - name: Build offline file version
+        run: pnpm run build-legacy
