@@ -9,8 +9,18 @@ import {
 } from 'lucide-react';
 import { Modal } from './Modal';
 import type { ProductExportFormat } from '../core/product-export';
+import type { ExportLayoutOptions } from '../core/export-layout';
+import type { Project } from '../core/types';
+import { ExportLayoutSettings } from './ExportLayoutSettings';
+import { ExportImageSize } from './ExportImageSize';
 
 interface Props {
+  project: Project;
+  productId: string;
+  collapsed: Set<string>;
+  layout: ExportLayoutOptions;
+  onLayoutChange: (value: ExportLayoutOptions) => void;
+  sampleTitle?: string;
   full: boolean;
   onFullChange: (full: boolean) => void;
   onExport: (kind: ProductExportFormat | 'json') => void;
@@ -32,7 +42,18 @@ const formats: {
     description: '保存全部产品，可重新导入或换设备打开',
   },
 ];
-export function ExportDialog({ full, onFullChange, onExport, onClose }: Props) {
+export function ExportDialog({
+  project,
+  productId,
+  collapsed,
+  layout,
+  onLayoutChange,
+  sampleTitle,
+  full,
+  onFullChange,
+  onExport,
+  onClose,
+}: Props) {
   return (
     <Modal
       className="export-modal"
@@ -54,6 +75,14 @@ export function ExportDialog({ full, onFullChange, onExport, onClose }: Props) {
           当前展开结构
         </label>
       </div>
+      <ExportLayoutSettings value={layout} onChange={onLayoutChange} sampleTitle={sampleTitle} />
+      <ExportImageSize
+        project={project}
+        productId={productId}
+        full={full}
+        collapsed={collapsed}
+        layout={layout}
+      />
       <div className="export-options">
         {formats.map(({ kind, icon: Icon, title, description }) => (
           <button key={kind} onClick={() => void onExport(kind)}>

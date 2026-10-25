@@ -5,6 +5,7 @@ import {
   type ProductExportFormat,
 } from './product-export';
 import type { Product, Project } from './types';
+import { normalizeExportLayout, type ExportLayoutOptions } from './export-layout';
 
 export type BatchFormat = ProductExportFormat;
 export interface BatchProgress {
@@ -61,6 +62,7 @@ interface Options {
   // Await the user downloading this part before allocating the next archive.
   onArchive: (archive: BatchArchive) => Promise<void>;
   maxPartBytes?: number;
+  layout?: Partial<ExportLayoutOptions>;
 }
 const yieldTask = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 export async function exportProductBatch({
@@ -71,8 +73,10 @@ export async function exportProductBatch({
   onProgress,
   onArchive,
   maxPartBytes = 32 * 1024 * 1024,
+  layout,
 }: Options): Promise<BatchSummary> {
   const products = selectedProducts(project, ids);
+  const exportLayout = normalizeExportLayout(layout);
   if (!products.length) throw new Error('请先选择需要导出的产品');
   if (!(maxPartBytes > 0)) throw new Error('分包大小必须大于 0');
   signal.throwIfAborted();
@@ -128,7 +132,7 @@ export async function exportProductBatch({
     let failure = '';
     const name = productExportName(product, index, format);
     try {
-      const output = await renderProductFile(project, product.id, { format });
+      const output = await renderProductFile(project, product.id, { format, layout: exportLayout });
       data =
         typeof output.data === 'string'
           ? encoder.encode(output.data)

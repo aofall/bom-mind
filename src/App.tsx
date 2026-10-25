@@ -45,6 +45,7 @@ import { ancestry, deserializeProject, quantityLabel, serializeProject } from '.
 import { download, nodeKind, safeFileName, visibleNodeIds } from './core/export';
 import { renderProductFile, type ProductExportFormat } from './core/product-export';
 import { countMappedFields } from './core/mapping';
+import { useExportLayout } from './hooks/useExportLayout';
 import { makeDemo } from './core/demo';
 import { loadRecent, saveRecent } from './core/storage';
 import {
@@ -92,6 +93,7 @@ function App() {
   const [recentAvailable, setRecentAvailable] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [exportFull, setExportFull] = useState(true);
+  const [exportLayout, setExportLayout] = useExportLayout();
   const [showIssues, setShowIssues] = useState(false);
   const [issueScope, setIssueScope] = useState<'all' | 'product'>('product');
   const [help, setHelp] = useState(false);
@@ -416,6 +418,7 @@ function App() {
           format: kind,
           full: exportFull,
           collapsed,
+          layout: exportLayout,
         });
         if (requestRevision !== revision.current) return;
         const name =
@@ -1114,6 +1117,12 @@ function App() {
       )}
       {showExport && project && (
         <ExportDialog
+          project={project}
+          productId={productId}
+          collapsed={collapsed}
+          layout={exportLayout}
+          onLayoutChange={setExportLayout}
+          sampleTitle={selected?.name}
           full={exportFull}
           onFullChange={setExportFull}
           onExport={exportFile}
@@ -1132,6 +1141,8 @@ function App() {
       )}
       {showBatch && project && (
         <BatchExportDialog
+          layout={exportLayout}
+          onLayoutChange={setExportLayout}
           project={project}
           selectedIds={exportIds}
           onClose={() => setShowBatch(false)}

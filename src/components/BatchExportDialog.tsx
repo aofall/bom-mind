@@ -12,13 +12,24 @@ import {
   type BatchSummary,
 } from '../core/batch-export';
 import type { Project } from '../core/types';
+import type { ExportLayoutOptions } from '../core/export-layout';
+import { ExportLayoutSettings } from './ExportLayoutSettings';
+import { ExportImageSize } from './ExportImageSize';
 
 interface Props {
   project: Project;
   selectedIds: Set<string>;
   onClose: () => void;
+  layout: ExportLayoutOptions;
+  onLayoutChange: (value: ExportLayoutOptions) => void;
 }
-export function BatchExportDialog({ project, selectedIds, onClose }: Props) {
+export function BatchExportDialog({
+  project,
+  selectedIds,
+  onClose,
+  layout,
+  onLayoutChange,
+}: Props) {
   const [ids] = useState(() => new Set(selectedIds));
   const [products] = useState(() => selectedProducts(project, ids));
   const [format, setFormat] = useState<BatchFormat>('svg');
@@ -71,6 +82,7 @@ export function BatchExportDialog({ project, selectedIds, onClose }: Props) {
         project,
         ids,
         format,
+        layout,
         signal: job.signal,
         onProgress: (next) => {
           if (mounted.current) {
@@ -150,6 +162,13 @@ export function BatchExportDialog({ project, selectedIds, onClose }: Props) {
       }
     >
       <div className="batch-content">
+        <ExportLayoutSettings value={layout} onChange={onLayoutChange} disabled={running} />
+        <ExportImageSize
+          project={project}
+          productId={products[0]?.id ?? ''}
+          layout={layout}
+          firstOnly
+        />
         <button
           className="button outline directory-csv"
           disabled={running}

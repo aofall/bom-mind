@@ -1,0 +1,127 @@
+.export-layout-settings {
+  margin: 0 25px 14px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fafcf8;
+}
+.export-layout-settings summary {
+  padding: 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #315d43;
+}
+.export-layout-settings fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0 12px 14px;
+  min-width: 0;
+}
+.layout-selects {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 100px;
+  gap: 12px;
+}
+.layout-selects label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 11px;
+  min-width: 0;
+}
+.layout-selects select {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 4px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 11px;
+  color: #315d43;
+}
+.layout-range {
+  display: block;
+  margin-top: 15px;
+  font-size: 11px;
+  color: #61745e;
+}
+.layout-range output {
+  float: right;
+}
+.layout-range input {
+  display: block;
+  width: 100%;
+  margin: 8px 0 0;
+  accent-color: var(--green);
+}
+.layout-presets {
+  display: flex;
+  gap: 7px;
+  margin-top: 10px;
+}
+.layout-presets button {
+  font-size: 11px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.layout-presets button.active {
+  background: #e6efdf;
+  border-color: #b4cab0;
+}
+.layout-auto {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 15px;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.layout-preview {
+  margin-top: 15px;
+  padding: 10px;
+  background: #edf3e8;
+  border-radius: 5px;
+}
+.layout-preview > span {
+  display: block;
+  color: #7a887f;
+  font-size: 10px;
+  margin-bottom: 8px;
+}
+.layout-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 240px;
+  width: auto;
+  height: auto;
+}
+.layout-note {
+  font-size: 10px;
+  line-height: 1.9;
+  color: #829079;
+  margin: 10px 0;
+}
+.export-image-size {
+  margin: 0 25px 14px;
+  color: #829079;
+  font-size: 10px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.export-image-size strong {
+  display: block;
+  color: #ad7932;
+  font-weight: 500;
+}
+.batch-content .export-layout-settings,
+.batch-content .export-image-size {
+  margin-left: 0;
+  margin-right: 0;
+}
+@media (max-width: 720px) {
+  .export-layout-settings,
+  .export-image-size {
+    margin-left: 18px;
+    margin-right: 18px;
+  }
+}
