@@ -50,7 +50,14 @@ export const DiagramViewport = forwardRef<DiagramHandle, Props>(function Diagram
   const [scale, setScale] = useState(1);
   const autoFit = useRef(fit);
   const previous = useRef<{ diagram: ExportDiagram; scale: number } | null>(null);
-  const drag = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+  const drag = useRef<{
+    pointerId: number;
+    x: number;
+    y: number;
+    left: number;
+    top: number;
+    moved: boolean;
+  } | null>(null);
   const suppressClick = useRef(false);
   const selectedId = useRef(selected);
   const scaleRef = useRef(scale);
@@ -211,25 +218,36 @@ export const DiagramViewport = forwardRef<DiagramHandle, Props>(function Diagram
     if (diagram.cards.find((card) => card.node.id === id)?.node.children.length) onToggle?.(id);
   }
   function pointerDown(event: PointerEvent<HTMLDivElement>) {
-    if (event.button !== 0 || !viewport.current) return;
+    if (event.button !== 0 || !event.isPrimary || drag.current || !viewport.current) return;
     suppressClick.current = false;
     drag.current = {
+      pointerId: event.pointerId,
       x: event.clientX,
       y: event.clientY,
       left: viewport.current.scrollLeft,
       top: viewport.current.scrollTop,
+      moved: false,
     };
   }
   function pointerMove(event: PointerEvent<HTMLDivElement>) {
     const start = drag.current;
     const element = viewport.current;
-    if (!start || !element) return;
+    if (!start || start.pointerId !== event.pointerId || !element) return;
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
-    if (Math.hypot(dx, dy) > 5) {
-      suppressClick.current = true;
+    if (!start.moved && Math.hypot(dx, dy) <= 5) return;
+    start.moved = true;
+    suppressClick.current = true;
+    if (!element.hasPointerCapture(event.pointerId)) {
       element.setPointerCapture(event.pointerId);
-      element.scrollTo(start.left - dx, start.top - dy);
+    }
+    element.scrollTo(start.left - dx, start.top - dy);
+  }
+  function pointerEnd(event: PointerEvent<HTMLDivElement>) {
+    if (drag.current?.pointerId !== event.pointerId) return;
+    drag.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
     }
   }
   return (
@@ -242,13 +260,12 @@ export const DiagramViewport = forwardRef<DiagramHandle, Props>(function Diagram
         tabIndex={0}
         onPointerDown={pointerDown}
         onPointerMove={pointerMove}
-        onPointerUp={() => {
-          drag.current = null;
-        }}
-        onPointerCancel={() => {
-          drag.current = null;
-        }}
-        onLostPointerCapture={() => {
+        onPointerUp={pointerEnd}
+        onPointerCancel={pointerEnd}
+        onLostPointerCapture={(event) => {
+          // Touch capture moving from an SVG child to this viewport bubbles a child loss event.
+          if (event.target !== event.currentTarget) return;
+          if (drag.current?.pointerId !== event.pointerId) return;
           drag.current = null;
         }}
         onFocusCapture={(event) => {
