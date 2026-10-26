@@ -767,7 +767,13 @@ function App() {
               />
               记住项目
             </label>
-            <button className="button outline compact" onClick={() => setShowExport(true)}>
+            <button
+              className="button outline compact"
+              onClick={() => {
+                if (view === 'table') setExportFull(tableFull);
+                setShowExport(true);
+              }}
+            >
               <ArrowDownToLine size={15} />
               导出
               <ChevronDown size={13} />
@@ -788,7 +794,7 @@ function App() {
               onClose={() => setLeftOpen(false)}
             />
             <section className="canvas-panel">
-              <div className="canvas-toolbar">
+              <div className={`canvas-toolbar ${view === 'table' ? 'table-toolbar' : ''}`}>
                 <div className="view-tabs" role="group" aria-label="显示方式">
                   <button
                     className={view === 'graph' ? 'active' : ''}
@@ -823,27 +829,41 @@ function App() {
                   </button>
                 </div>
                 <div className="toolbar-divider" />
-                <select
-                  className="depth-select"
-                  aria-label="展开层级"
-                  value=""
-                  disabled={view === 'table' && tableFull}
-                  onChange={(e) => {
-                    const depth = Number(e.target.value);
-                    setCollapsed(
-                      depth < 0 ? new Set() : initialCollapse(project, productId, depth),
-                    );
-                  }}
-                >
-                  <option value="" disabled>
-                    展开层级
-                  </option>
-                  <option value="1">展开至 1 级</option>
-                  <option value="2">展开至 2 级</option>
-                  <option value="3">展开至 3 级</option>
-                  <option value="-1">全部展开</option>
-                  <option value="0">全部收起</option>
-                </select>
+                <div className="structure-controls">
+                  {view === 'table' && (
+                    <select
+                      className="depth-select"
+                      aria-label="组合表显示范围"
+                      value={tableFull ? 'full' : 'current'}
+                      onChange={(e) => setTableFull(e.target.value === 'full')}
+                    >
+                      <option value="full">完整结构</option>
+                      <option value="current">当前展开结构</option>
+                    </select>
+                  )}
+                  {(view !== 'table' || !tableFull) && (
+                    <select
+                      className="depth-select"
+                      aria-label="展开层级"
+                      value=""
+                      onChange={(e) => {
+                        const depth = Number(e.target.value);
+                        setCollapsed(
+                          depth < 0 ? new Set() : initialCollapse(project, productId, depth),
+                        );
+                      }}
+                    >
+                      <option value="" disabled>
+                        展开层级
+                      </option>
+                      <option value="1">展开至 1 级</option>
+                      <option value="2">展开至 2 级</option>
+                      <option value="3">展开至 3 级</option>
+                      <option value="-1">全部展开</option>
+                      <option value="0">全部收起</option>
+                    </select>
+                  )}
+                </div>
                 {view !== 'table' && (
                   <button
                     type="button"
@@ -876,6 +896,20 @@ function App() {
                   <PanelRight size={15} />
                   <span>节点详情</span>
                 </button>
+                {view === 'table' && (
+                  <button
+                    type="button"
+                    className={`layout-toggle ${showTableSettings ? 'active' : ''}`}
+                    aria-label="表格设置"
+                    aria-expanded={showTableSettings}
+                    aria-controls="canvas-table-settings"
+                    title="表格设置"
+                    onClick={() => setShowTableSettings(!showTableSettings)}
+                  >
+                    <SlidersHorizontal size={15} />
+                    <span>表格设置</span>
+                  </button>
+                )}
                 <div className="material-search search-field">
                   <Search size={14} />
                   <input
@@ -904,46 +938,6 @@ function App() {
                   )}
                 </div>
               </div>
-              {view === 'table' && (
-                <div className="table-options-bar" role="group" aria-label="组合表范围与操作">
-                  <label>
-                    <input
-                      type="radio"
-                      name="table-scope"
-                      checked={tableFull}
-                      onChange={() => setTableFull(true)}
-                    />
-                    完整结构
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="table-scope"
-                      checked={!tableFull}
-                      onChange={() => setTableFull(false)}
-                    />
-                    当前展开结构
-                  </label>
-                  <button
-                    type="button"
-                    className="layout-toggle"
-                    aria-expanded={showTableSettings}
-                    aria-controls="canvas-table-settings"
-                    onClick={() => setShowTableSettings(!showTableSettings)}
-                  >
-                    <SlidersHorizontal size={14} />
-                    表格设置
-                  </button>
-                  <button
-                    type="button"
-                    className="button outline compact"
-                    onClick={() => void exportFile('xlsx', tableFull)}
-                  >
-                    <FileSpreadsheet size={15} />
-                    导出 Excel
-                  </button>
-                </div>
-              )}
               <div className="canvas-body">
                 {view === 'table' && showTableSettings && (
                   <section

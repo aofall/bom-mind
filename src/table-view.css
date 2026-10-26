@@ -1,21 +1,13 @@
-.table-options-bar {
+.structure-controls {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 9px 16px;
-  background: #fff;
-  border-bottom: 1px solid var(--line);
-  color: #61745e;
-  font-size: 12px;
+  flex-shrink: 0;
+  gap: 9px;
 }
-.table-options-bar label {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.table-options-bar .button {
-  margin-left: auto;
+.table-toolbar .material-search {
+  flex: 1;
+  min-width: 140px;
+  max-width: 220px;
 }
 .table-field-options {
   display: grid;
@@ -136,6 +128,10 @@
   background: #e6efdf;
 }
 @media (max-width: 720px) {
+  .table-toolbar .material-search {
+    flex-basis: 100%;
+    max-width: none;
+  }
   .canvas-toolbar .view-tabs button {
     padding: 6px 5px;
     gap: 3px;
@@ -144,13 +140,10 @@
   .canvas-toolbar .layout-toggle > span {
     display: none;
   }
-  .table-options-bar {
-    gap: 8px;
-    padding: 8px 12px;
-    font-size: 11px;
+  .structure-controls {
+    margin-left: auto;
   }
-  .table-options-bar .button {
-    padding: 7px 10px;
-    font-size: 11px;
+  .structure-controls .depth-select {
+    margin-left: 0;
   }
 }
