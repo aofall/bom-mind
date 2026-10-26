@@ -37,6 +37,7 @@ import {
   X,
 } from 'lucide-react';
 import { BomGraph, type GraphHandle } from './components/BomGraph';
+import { GitHubIcon } from './components/GitHubIcon';
 import { ProductDirectory } from './components/ProductDirectory';
 import { BatchExportDialog } from './components/BatchExportDialog';
 import { ImportDialog } from './components/ImportDialog';
@@ -599,6 +600,16 @@ function App() {
             <span className="status-dot" />
             浏览器本地处理
           </span>
+          <a
+            className="icon-button"
+            href="https://github.com/aofall/bom-mind"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="在新标签页打开 GitHub 仓库"
+            title="GitHub · aofall/bom-mind"
+          >
+            <GitHubIcon size={19} />
+          </a>
           <button
             className="icon-button help-button"
             aria-label="查看使用说明"
