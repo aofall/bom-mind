@@ -5,6 +5,7 @@ import './styles.css';
 import './typography.css';
 import './batch-tools.css';
 import './export-layout.css';
+import './table-view.css';
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

@@ -6,6 +6,7 @@ import {
 } from './product-export';
 import type { Product, Project } from './types';
 import { normalizeExportLayout, type ExportLayoutOptions } from './export-layout';
+import { normalizeTableOptions, type TableOptions } from './hierarchy-table';
 
 export type BatchFormat = ProductExportFormat;
 export interface BatchProgress {
@@ -63,6 +64,7 @@ interface Options {
   onArchive: (archive: BatchArchive) => Promise<void>;
   maxPartBytes?: number;
   layout?: Partial<ExportLayoutOptions>;
+  table?: Partial<TableOptions>;
 }
 const yieldTask = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 export async function exportProductBatch({
@@ -74,13 +76,17 @@ export async function exportProductBatch({
   onArchive,
   maxPartBytes = 32 * 1024 * 1024,
   layout,
+  table,
 }: Options): Promise<BatchSummary> {
   const products = selectedProducts(project, ids);
   const exportLayout = normalizeExportLayout(layout);
+  const tableOptions = normalizeTableOptions(table);
   if (!products.length) throw new Error('请先选择需要导出的产品');
   if (!(maxPartBytes > 0)) throw new Error('分包大小必须大于 0');
   signal.throwIfAborted();
   const { default: JSZip } = await import('jszip');
+  const renderer =
+    format === 'xlsx' ? (await import('./table-file')).createTableFileRenderer() : undefined;
   signal.throwIfAborted();
   const encoder = new TextEncoder();
   let zip = new JSZip();
@@ -104,7 +110,7 @@ export async function exportProductBatch({
     const blob = await zip.generateAsync(
       {
         type: 'blob',
-        compression: format === 'png' ? 'STORE' : 'DEFLATE',
+        compression: format === 'png' || format === 'xlsx' ? 'STORE' : 'DEFLATE',
         compressionOptions: { level: 3 },
         streamFiles: true,
       },
@@ -126,38 +132,48 @@ export async function exportProductBatch({
     signal.throwIfAborted();
     part++;
   }
-  for (const [index, product] of products.entries()) {
-    signal.throwIfAborted();
-    let data: Uint8Array | undefined;
-    let failure = '';
-    const name = productExportName(product, index, format);
-    try {
-      const output = await renderProductFile(project, product.id, { format, layout: exportLayout });
-      data =
-        typeof output.data === 'string'
-          ? encoder.encode(output.data)
-          : new Uint8Array(await output.data.arrayBuffer());
-    } catch (error) {
-      failure = error instanceof Error ? error.message : '文件生成失败';
+  try {
+    for (const [index, product] of products.entries()) {
+      signal.throwIfAborted();
+      let data: Uint8Array | undefined;
+      let failure = '';
+      const name = productExportName(product, index, format);
+      try {
+        const output = await renderProductFile(project, product.id, {
+          format,
+          layout: exportLayout,
+          table: tableOptions,
+          tableRenderer: renderer,
+          signal,
+        });
+        data =
+          typeof output.data === 'string'
+            ? encoder.encode(output.data)
+            : new Uint8Array(await output.data.arrayBuffer());
+      } catch (error) {
+        failure = error instanceof Error ? error.message : '文件生成失败';
+      }
+      signal.throwIfAborted();
+      if (data && bytes > 0 && bytes + data.byteLength > maxPartBytes) {
+        await flush(false);
+      }
+      partProducts.push(product);
+      if (data) {
+        zip.file(name, data);
+        bytes += data.byteLength;
+        success++;
+        results.push(`成功：${name}`);
+      } else {
+        failed++;
+        results.push(`失败：${name} — ${failure}`);
+      }
+      done++;
+      report('rendering');
+      await yieldTask();
     }
-    signal.throwIfAborted();
-    if (data && bytes > 0 && bytes + data.byteLength > maxPartBytes) {
-      await flush(false);
-    }
-    partProducts.push(product);
-    if (data) {
-      zip.file(name, data);
-      bytes += data.byteLength;
-      success++;
-      results.push(`成功：${name}`);
-    } else {
-      failed++;
-      results.push(`失败：${name} — ${failure}`);
-    }
-    done++;
-    report('rendering');
-    await yieldTask();
+    await flush(true);
+    return { total: products.length, success, failed, parts: part - 1 };
+  } finally {
+    renderer?.dispose();
   }
-  await flush(true);
-  return { total: products.length, success, failed, parts: part - 1 };
 }

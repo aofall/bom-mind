@@ -15,6 +15,7 @@ import type { Project } from '../core/types';
 import type { ExportLayoutOptions } from '../core/export-layout';
 import { ExportWorkspace } from './ExportWorkspace';
 import { BatchPreviewPicker } from './BatchPreviewPicker';
+import type { TableOptions } from '../core/hierarchy-table';
 
 interface Props {
   project: Project;
@@ -22,6 +23,8 @@ interface Props {
   onClose: () => void;
   layout: ExportLayoutOptions;
   onLayoutChange: (value: ExportLayoutOptions) => void;
+  table: TableOptions;
+  onTableChange: (value: TableOptions) => void;
 }
 export function BatchExportDialog({
   project,
@@ -29,6 +32,8 @@ export function BatchExportDialog({
   onClose,
   layout,
   onLayoutChange,
+  table,
+  onTableChange,
 }: Props) {
   const [ids] = useState(() => new Set(selectedIds));
   const [products] = useState(() => selectedProducts(project, ids));
@@ -84,6 +89,7 @@ export function BatchExportDialog({
         ids,
         format,
         layout,
+        table,
         signal: job.signal,
         onProgress: (next) => {
           if (mounted.current) {
@@ -168,6 +174,9 @@ export function BatchExportDialog({
         layout={layout}
         onLayoutChange={onLayoutChange}
         disabled={running}
+        previewKind={format === 'xlsx' ? 'table' : 'image'}
+        table={table}
+        onTableChange={onTableChange}
         previewHeader={
           <BatchPreviewPicker products={products} productId={previewId} onChange={setPreviewId} />
         }
@@ -185,7 +194,7 @@ export function BatchExportDialog({
           </button>
           <fieldset disabled={running} className="batch-formats">
             <legend>产品结构格式</legend>
-            {(['svg', 'text', 'png'] as const).map((kind) => (
+            {(['svg', 'text', 'png', 'xlsx'] as const).map((kind) => (
               <label key={kind}>
                 <input
                   type="radio"
@@ -194,7 +203,13 @@ export function BatchExportDialog({
                   checked={format === kind}
                   onChange={() => setFormat(kind)}
                 />
-                {kind === 'svg' ? 'SVG 矢量图' : kind === 'text' ? '缩进文本' : 'PNG 图片'}
+                {kind === 'svg'
+                  ? 'SVG 矢量图'
+                  : kind === 'text'
+                    ? '缩进文本'
+                    : kind === 'xlsx'
+                      ? 'Excel 组合表'
+                      : 'PNG 图片'}
               </label>
             ))}
           </fieldset>

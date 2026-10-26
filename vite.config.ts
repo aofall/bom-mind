@@ -37,6 +37,10 @@ export default defineConfig(({ mode }) => {
               find: './worker?worker',
               replacement: `${fileURLToPath(new URL('./src/worker.ts', import.meta.url))}?worker&inline`,
             },
+            {
+              find: '../table-export.worker?worker',
+              replacement: `${fileURLToPath(new URL('./src/table-export.worker.ts', import.meta.url))}?worker&inline`,
+            },
           ]
         : [],
     },

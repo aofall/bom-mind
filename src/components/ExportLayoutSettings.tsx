@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import { normalizeExportLayout, type ExportLayoutOptions } from '../core/export-layout';
 
-function WidthControl({
+export function WidthControl({
   label,
   value,
   min = 200,

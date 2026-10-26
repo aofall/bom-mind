@@ -28,6 +28,7 @@ import {
   Minus,
   Plus,
   PanelRight,
+  Table2,
   Search,
   ShieldCheck,
   SlidersHorizontal,
@@ -52,6 +53,10 @@ import { useNodeDetails } from './hooks/useNodeDetails';
 import { NodeDetailsPanel } from './components/NodeDetailsPanel';
 import { ExportLayoutSettings } from './components/ExportLayoutSettings';
 import { makeDemo } from './core/demo';
+import { buildHierarchyTable } from './core/hierarchy-table';
+import { useTableOptions } from './hooks/useTableOptions';
+import { HierarchyTable, type TableHandle } from './components/HierarchyTable';
+import { TableSettings } from './components/TableSettings';
 import { loadRecent, saveRecent } from './core/storage';
 import {
   FIELDS,
@@ -77,7 +82,7 @@ function App() {
   const [selectedId, setSelectedId] = useState('');
 
   const [collapsed, setCollapsed] = useState(new Set<string>());
-  const [view, setView] = useState<'graph' | 'outline'>('graph');
+  const [view, setView] = useState<'graph' | 'outline' | 'table'>('graph');
   const [productSearch, setProductSearch] = useState('');
   const [materialSearch, setMaterialSearch] = useState('');
 
@@ -100,6 +105,9 @@ function App() {
   const [exportFull, setExportFull] = useState(true);
   const [exportLayout, setExportLayout] = useExportLayout();
   const [showLayout, setShowLayout] = useState(false);
+  const [tableOptions, setTableOptions] = useTableOptions();
+  const [tableFull, setTableFull] = useState(true);
+  const [showTableSettings, setShowTableSettings] = useState(false);
   const [showIssues, setShowIssues] = useState(false);
   const [issueScope, setIssueScope] = useState<'all' | 'product'>('product');
   const [help, setHelp] = useState(false);
@@ -118,6 +126,8 @@ function App() {
   const fileInput = useRef<HTMLInputElement>(null);
   const worker = useRef<Worker | null>(null);
   const graph = useRef<GraphHandle>(null);
+  const tableView = useRef<TableHandle>(null);
+  const singleExport = useRef<AbortController | null>(null);
   const detailsToggle = useRef<HTMLButtonElement>(null);
   const revision = useRef(0);
 
@@ -131,6 +141,7 @@ function App() {
   }, []);
   const closeOverlays = useCallback(() => {
     setShowLayout(false);
+    setShowTableSettings(false);
     setShowBatch(false);
     setShowExport(false);
     setShowIssues(false);
@@ -182,7 +193,13 @@ function App() {
     }, 350);
     return () => clearTimeout(t);
   }, [project, remember]);
-  useEffect(() => () => worker.current?.terminate(), []);
+  useEffect(
+    () => () => {
+      worker.current?.terminate();
+      singleExport.current?.abort();
+    },
+    [],
+  );
   useEffect(() => {
     const close = (event: KeyboardEvent) => {
       // Modal consumes Escape and runs its own cancellation before this listener.
@@ -222,6 +239,13 @@ function App() {
   const path =
     project && selected ? ancestry(project, selected.id).map((id) => project.nodes[id]) : [];
   const visible = project && productId ? visibleNodeIds(project, productId, collapsed) : [];
+  const tableModel = useMemo(
+    () =>
+      project && productId && view === 'table'
+        ? buildHierarchyTable(project, productId, collapsed, tableFull, tableOptions)
+        : null,
+    [project, productId, view, collapsed, tableFull, tableOptions],
+  );
   const issues =
     project?.issues.filter((i) => issueScope === 'all' || i.productId === productId) ?? [];
   const selectionCount = selected
@@ -265,7 +289,10 @@ function App() {
       return next;
     });
     selectNode(id);
-    setTimeout(() => graph.current?.focus(id), 150);
+    setTimeout(() => {
+      if (view === 'table') tableView.current?.focus(id);
+      else graph.current?.focus(id);
+    }, 150);
   }
   useEffect(() => {
     if (!project || !materialSearch.trim()) return;
@@ -276,6 +303,8 @@ function App() {
     });
   }, [project, materialSearch, matchedIds]);
   function cancelImport() {
+    singleExport.current?.abort();
+    singleExport.current = null;
     revision.current++;
     worker.current?.terminate();
     worker.current = null;
@@ -418,9 +447,11 @@ function App() {
     setHeaderRow(sheet.headerRow);
     setMapping(sheet.mapping);
   }
-  async function exportFile(kind: ProductExportFormat | 'json') {
-    if (!project || !product) return;
+  async function exportFile(kind: ProductExportFormat | 'json', full = exportFull) {
+    if (!project || !product || singleExport.current) return;
     const requestRevision = revision.current;
+    const job = new AbortController();
+    singleExport.current = job;
     try {
       if (kind === 'json') {
         download(
@@ -429,26 +460,31 @@ function App() {
           'application/json',
         );
       } else {
-        if (kind !== 'text') setBusy('正在生成导出图片…');
+        if (kind !== 'text') {
+          setBusy(kind === 'xlsx' ? '正在生成 Excel 组合表…' : '正在生成导出图片…');
+        }
         const output = await renderProductFile(project, productId, {
           format: kind,
-          full: exportFull,
+          full,
           collapsed,
           layout: exportLayout,
+          table: tableOptions,
+          signal: job.signal,
         });
-        if (requestRevision !== revision.current) return;
+        if (requestRevision !== revision.current || job.signal.aborted) return;
         const name =
           kind === 'text'
             ? safeFileName(product.name)
-            : `${safeFileName(product.name)}-${exportFull ? '完整' : '当前视图'}`;
+            : `${safeFileName(product.name)}-${full ? '完整' : '当前视图'}`;
         download(output.data, `${name}.${output.extension}`, output.mimeType);
       }
       setShowExport(false);
       setToast('已生成下载文件');
     } catch (e) {
-      if (requestRevision !== revision.current) return;
+      if (requestRevision !== revision.current || job.signal.aborted) return;
       setError(e instanceof Error ? e.message : '导出失败');
     } finally {
+      if (singleExport.current === job) singleExport.current = null;
       if (requestRevision === revision.current) {
         setBusy('');
       }
@@ -756,7 +792,10 @@ function App() {
                 <div className="view-tabs" role="group" aria-label="显示方式">
                   <button
                     className={view === 'graph' ? 'active' : ''}
-                    onClick={() => setView('graph')}
+                    onClick={() => {
+                      setView('graph');
+                      setShowTableSettings(false);
+                    }}
                   >
                     <GitBranch size={15} />
                     结构图
@@ -766,10 +805,21 @@ function App() {
                     onClick={() => {
                       setView('outline');
                       setShowLayout(false);
+                      setShowTableSettings(false);
                     }}
                   >
                     <ListTree size={15} />
                     文字树
+                  </button>
+                  <button
+                    className={view === 'table' ? 'active' : ''}
+                    onClick={() => {
+                      setView('table');
+                      setShowLayout(false);
+                    }}
+                  >
+                    <Table2 size={15} />
+                    组合表
                   </button>
                 </div>
                 <div className="toolbar-divider" />
@@ -777,6 +827,7 @@ function App() {
                   className="depth-select"
                   aria-label="展开层级"
                   value=""
+                  disabled={view === 'table' && tableFull}
                   onChange={(e) => {
                     const depth = Number(e.target.value);
                     setCollapsed(
@@ -793,19 +844,22 @@ function App() {
                   <option value="-1">全部展开</option>
                   <option value="0">全部收起</option>
                 </select>
-                <button
-                  type="button"
-                  className={`layout-toggle ${showLayout ? 'active' : ''}`}
-                  aria-expanded={showLayout}
-                  aria-controls="canvas-layout-panel"
-                  onClick={() => {
-                    setView('graph');
-                    setShowLayout(!showLayout);
-                  }}
-                >
-                  <SlidersHorizontal size={15} />
-                  排版设置
-                </button>
+                {view !== 'table' && (
+                  <button
+                    type="button"
+                    className={`layout-toggle ${showLayout ? 'active' : ''}`}
+                    aria-label="排版设置"
+                    aria-expanded={showLayout}
+                    aria-controls="canvas-layout-panel"
+                    onClick={() => {
+                      setView('graph');
+                      setShowLayout(!showLayout);
+                    }}
+                  >
+                    <SlidersHorizontal size={15} />
+                    <span>排版设置</span>
+                  </button>
+                )}
                 <button
                   ref={detailsToggle}
                   type="button"
@@ -850,7 +904,67 @@ function App() {
                   )}
                 </div>
               </div>
+              {view === 'table' && (
+                <div className="table-options-bar" role="group" aria-label="组合表范围与操作">
+                  <label>
+                    <input
+                      type="radio"
+                      name="table-scope"
+                      checked={tableFull}
+                      onChange={() => setTableFull(true)}
+                    />
+                    完整结构
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="table-scope"
+                      checked={!tableFull}
+                      onChange={() => setTableFull(false)}
+                    />
+                    当前展开结构
+                  </label>
+                  <button
+                    type="button"
+                    className="layout-toggle"
+                    aria-expanded={showTableSettings}
+                    aria-controls="canvas-table-settings"
+                    onClick={() => setShowTableSettings(!showTableSettings)}
+                  >
+                    <SlidersHorizontal size={14} />
+                    表格设置
+                  </button>
+                  <button
+                    type="button"
+                    className="button outline compact"
+                    onClick={() => void exportFile('xlsx', tableFull)}
+                  >
+                    <FileSpreadsheet size={15} />
+                    导出 Excel
+                  </button>
+                </div>
+              )}
               <div className="canvas-body">
+                {view === 'table' && showTableSettings && (
+                  <section
+                    className="canvas-layout-panel"
+                    id="canvas-table-settings"
+                    aria-label="组合表设置"
+                  >
+                    <div className="layout-panel-heading">
+                      <strong>组合表设置</strong>
+                      <button
+                        type="button"
+                        className="icon-button"
+                        aria-label="关闭表格设置"
+                        onClick={() => setShowTableSettings(false)}
+                      >
+                        <X size={17} />
+                      </button>
+                    </div>
+                    <TableSettings value={tableOptions} onChange={setTableOptions} />
+                  </section>
+                )}
                 {showLayout && (
                   <section
                     className="canvas-layout-panel"
@@ -879,6 +993,16 @@ function App() {
                     rootId={productId}
                     collapsed={collapsed}
                     layout={exportLayout}
+                    selected={selectedId}
+                    matches={matchedIds}
+                    onSelect={selectNode}
+                    onToggle={toggleNode}
+                  />
+                ) : view === 'table' && tableModel ? (
+                  <HierarchyTable
+                    key={productId}
+                    ref={tableView}
+                    model={tableModel}
                     selected={selectedId}
                     matches={matchedIds}
                     onSelect={selectNode}
@@ -965,11 +1089,13 @@ function App() {
                     </button>
                   </div>
                 )}
-                <div className="canvas-hint">
-                  {view === 'graph'
-                    ? '点击节点选中与展开 · 拖动画布平移'
-                    : '展开箭头查看下级 · “节点详情”查看信息'}
-                </div>
+                {view !== 'table' && (
+                  <div className="canvas-hint">
+                    {view === 'graph'
+                      ? '点击节点选中与展开 · 拖动画布平移'
+                      : '展开箭头查看下级 · “节点详情”查看信息'}
+                  </div>
+                )}
               </div>
               <footer className="canvas-footer">
                 <div>
@@ -981,7 +1107,9 @@ function App() {
                   末级材料
                 </div>
                 <span>
-                  显示 {visible.length} / {(product?.count ?? 0) + 1} 个节点
+                  {view === 'table' && tableModel
+                    ? `${tableModel.cells.length} 个材料节点 · ${tableModel.branchCount} 个末端分支`
+                    : `显示 ${visible.length} / ${(product?.count ?? 0) + 1} 个节点`}
                 </span>
               </footer>
             </section>
@@ -1187,6 +1315,9 @@ function App() {
           collapsed={collapsed}
           layout={exportLayout}
           onLayoutChange={setExportLayout}
+          table={tableOptions}
+          onTableChange={setTableOptions}
+          initialTablePreview={view === 'table'}
           full={exportFull}
           onFullChange={setExportFull}
           onExport={exportFile}
@@ -1207,6 +1338,8 @@ function App() {
         <BatchExportDialog
           layout={exportLayout}
           onLayoutChange={setExportLayout}
+          table={tableOptions}
+          onTableChange={setTableOptions}
           project={project}
           selectedIds={exportIds}
           onClose={() => setShowBatch(false)}
