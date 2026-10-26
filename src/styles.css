@@ -67,6 +67,13 @@ input[type='radio'] {
 .app {
   min-height: 100dvh;
 }
+.app:has(> .workspace) {
+  height: 100dvh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -79,6 +86,7 @@ input[type='radio'] {
   border: 0;
 }
 .app-header {
+  flex-shrink: 0;
   height: 78px;
   display: flex;
   align-items: center;
@@ -124,11 +132,20 @@ input[type='radio'] {
   background: var(--line);
 }
 .header-context {
+  flex-shrink: 0;
   font-size: 12px;
   color: #8a948c;
   letter-spacing: 0.5px;
 }
+.header-project-info {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
 .header-actions {
+  flex-shrink: 0;
   display: flex;
   gap: 17px;
   align-items: center;
@@ -411,12 +428,13 @@ input[type='radio'] {
   gap: 12px;
 }
 .project-bar {
-  height: 72px;
+  min-height: 72px;
+  flex-shrink: 0;
   background: #f6f8f3;
   display: flex;
   align-items: center;
   gap: 24px;
-  padding: 0 28px;
+  padding: 10px 28px;
   border-bottom: 1px solid var(--line);
 }
 .source-file {
@@ -424,9 +442,11 @@ input[type='radio'] {
   gap: 10px;
   align-items: center;
   min-width: 0;
-  max-width: 330px;
+  width: max-content;
+  flex: 0 1 auto;
 }
 .source-file > svg {
+  flex-shrink: 0;
   color: #6c8e69;
 }
 .source-file strong {
@@ -438,7 +458,9 @@ input[type='radio'] {
   text-overflow: ellipsis;
 }
 .source-file > div {
+  width: max-content;
   min-width: 0;
+  overflow: hidden;
 }
 .source-file span {
   display: flex;
@@ -447,6 +469,7 @@ input[type='radio'] {
   font-size: 9px;
   color: #8e998a;
   margin-top: 4px;
+  white-space: nowrap;
 }
 .source-file i {
   display: block;
@@ -456,9 +479,10 @@ input[type='radio'] {
   background: #a7b1a1;
 }
 .project-metrics {
+  flex-shrink: 0;
   display: flex;
-  gap: 22px;
-  padding-left: 22px;
+  gap: 14px;
+  padding-left: 18px;
   border-left: 1px solid #dfe6d9;
   font-size: 10px;
   color: #8b9685;
@@ -501,8 +525,8 @@ input[type='radio'] {
 .workspace {
   display: grid;
   grid-template-columns: 252px minmax(0, 1fr) 275px;
-  height: calc(100dvh - 150px);
-  min-height: 530px;
+  flex: 1;
+  min-height: 0;
 }
 .product-sidebar {
   border-right: 1px solid var(--line);
@@ -658,51 +682,62 @@ input[type='radio'] {
   min-height: 0;
 }
 .canvas-heading {
-  padding: 25px 27px 20px;
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: #fff;
-  border-bottom: 1px solid #edf0e8;
+}
+.current-product-copy {
+  min-width: 0;
+  flex: 1;
 }
 .canvas-kicker {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  color: #9da694;
-  font-size: 9px;
+  color: #71806c;
+  font-size: 14px;
+  line-height: 1.6;
   letter-spacing: 0.2px;
 }
-.canvas-kicker span:last-child {
+.current-product-code {
   font-family: Consolas, monospace;
 }
-.canvas-heading h1 {
-  font-size: 19px;
-  line-height: 1.6;
-  font-weight: 500;
+.current-product-name,
+.current-product-spec {
+  font-size: 16px;
+  font-weight: 600;
   color: #2d4a35;
-  margin-top: 9px;
-  overflow-wrap: anywhere;
 }
-.canvas-heading p {
-  font-size: 10px;
-  color: #9aa28f;
-  margin-top: 5px;
-  display: flex;
-  gap: 9px;
-  flex-wrap: wrap;
+.current-product-code,
+.current-product-name,
+.current-product-spec {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.current-product-spec {
+  flex: 0 1 auto;
+}
+.canvas-kicker > svg,
+.product-context-label {
+  flex-shrink: 0;
 }
 .root-badge {
-  color: #8b9d7d;
-  font-size: 8px;
+  color: #687d58;
+  font-size: 12px;
   background: #f3f6ed;
   border: 1px solid #e7eddd;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 5px;
   border-radius: 4px;
-  padding: 6px 8px;
+  padding: 4px 7px;
+  flex-shrink: 0;
   white-space: nowrap;
 }
 .root-badge > span {
@@ -773,15 +808,6 @@ input[type='radio'] {
   background-color: #f8faf5;
   background-image: radial-gradient(#dce5d3 0.7px, transparent 0.7px);
   background-size: 19px 19px;
-}
-.graph-viewport {
-  overflow: auto;
-  width: 100%;
-  height: 100%;
-}
-.graph-viewport > div {
-  min-height: 100%;
-  min-width: 100%;
 }
 .zoom-controls {
   position: absolute;
@@ -1360,9 +1386,6 @@ input[type='radio'] {
   line-height: 1.8;
   margin: 0 28px 15px;
 }
-.export-modal {
-  max-width: 510px;
-}
 .export-scope {
   display: flex;
   align-items: center;
@@ -1691,9 +1714,6 @@ input[type='radio'] {
   .workspace {
     grid-template-columns: 280px minmax(0, 1fr) 300px;
   }
-  .canvas-heading {
-    padding: 29px 32px;
-  }
   .product-item {
     padding: 17px 13px;
   }
@@ -1712,6 +1732,17 @@ input[type='radio'] {
   }
   .app-header {
     padding: 0 24px;
+    gap: 16px;
+  }
+  .header-project-info {
+    gap: 12px;
+  }
+  .header-project-info .project-metrics {
+    gap: 10px;
+    padding-left: 12px;
+  }
+  .app-header:has(.header-project-info) .local-status {
+    display: none;
   }
   .header-context {
     display: none;
@@ -1724,14 +1755,8 @@ input[type='radio'] {
     gap: 14px;
     padding-left: 16px;
   }
-  .source-file {
-    max-width: 250px;
-  }
   .remember-control {
     font-size: 9px;
-  }
-  .root-badge {
-    display: none;
   }
   .canvas-toolbar {
     gap: 9px;
@@ -1742,9 +1767,6 @@ input[type='radio'] {
   }
   .view-tabs button {
     padding: 6px 8px;
-  }
-  .canvas-heading {
-    padding: 21px;
   }
   .detail-heading {
     padding: 24px 17px 20px;
@@ -1795,14 +1817,8 @@ input[type='radio'] {
   .project-metrics {
     gap: 12px;
   }
-  .project-metrics > span:last-child {
-    display: none;
-  }
   .project-bar > .remember-control {
     display: none;
-  }
-  .source-file {
-    max-width: 260px;
   }
   .welcome {
     gap: 30px;
@@ -1850,6 +1866,28 @@ input[type='radio'] {
     height: 67px;
     padding: 0 17px;
     gap: 12px;
+  }
+  .app-header:has(.header-project-info) {
+    height: auto;
+    min-height: 67px;
+    padding: 12px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .header-project-info {
+    order: 3;
+    flex-basis: 100%;
+    gap: 8px;
+  }
+  .header-project-info .project-metrics {
+    display: flex;
+    gap: 7px;
+    padding-left: 8px;
+    font-size: 9px;
+  }
+  .header-project-info .project-metrics b {
+    font-size: 11px;
+    margin-right: 2px;
   }
   .brand {
     font-size: 18px;
@@ -1969,14 +2007,12 @@ input[type='radio'] {
     gap: 5px;
   }
   .project-bar {
-    height: 64px;
+    min-height: 64px;
     gap: 9px;
-    padding: 0 15px;
+    padding: 9px 12px;
   }
   .source-file {
-    max-width: calc(100vw - 155px);
     gap: 7px;
-    flex: 1;
   }
   .source-file strong {
     font-size: 10px;
@@ -2009,8 +2045,6 @@ input[type='radio'] {
   }
   .workspace {
     display: flex;
-    height: calc(100dvh - 131px);
-    min-height: 460px;
   }
   .product-sidebar {
     display: none;
@@ -2029,11 +2063,10 @@ input[type='radio'] {
     width: 100%;
   }
   .canvas-heading {
-    padding: 17px 19px 15px;
     gap: 8px;
   }
   .canvas-kicker {
-    font-size: 9px;
+    font-size: 11px;
     gap: 6px;
   }
   .canvas-kicker > .mobile-action {
@@ -2043,14 +2076,24 @@ input[type='radio'] {
     margin-left: -3px;
     color: #78936d;
   }
-  .canvas-heading h1 {
-    font-size: 17px;
-    margin-top: 5px;
-    line-height: 1.55;
+  .current-product-code {
+    max-width: 140px;
   }
-  .canvas-heading p {
-    font-size: 9px;
-    gap: 6px;
+  .current-product-name,
+  .current-product-spec {
+    font-size: 14px;
+  }
+  .product-context-label,
+  .canvas-kicker > svg:first-of-type {
+    display: none;
+  }
+  .root-badge {
+    font-size: 10px;
+    padding: 2px 4px;
+  }
+  .canvas-heading > .mobile-action {
+    width: 23px;
+    flex-shrink: 0;
   }
   .canvas-toolbar {
     padding: 10px 15px;

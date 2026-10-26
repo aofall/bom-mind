@@ -13,8 +13,8 @@ import {
 } from '../core/batch-export';
 import type { Project } from '../core/types';
 import type { ExportLayoutOptions } from '../core/export-layout';
-import { ExportLayoutSettings } from './ExportLayoutSettings';
-import { ExportImageSize } from './ExportImageSize';
+import { ExportWorkspace } from './ExportWorkspace';
+import { BatchPreviewPicker } from './BatchPreviewPicker';
 
 interface Props {
   project: Project;
@@ -32,6 +32,7 @@ export function BatchExportDialog({
 }: Props) {
   const [ids] = useState(() => new Set(selectedIds));
   const [products] = useState(() => selectedProducts(project, ids));
+  const [previewId, setPreviewId] = useState(() => products[0]?.id ?? '');
   const [format, setFormat] = useState<BatchFormat>('svg');
   const [phase, setPhase] = useState<'idle' | 'running' | 'ready' | 'done' | 'cancelled' | 'error'>(
     'idle',
@@ -130,7 +131,7 @@ export function BatchExportDialog({
   }
   return (
     <Modal
-      className="batch-modal"
+      className="batch-modal wide-export-modal"
       label="批量导出产品"
       eyebrow="批量导出"
       title={`已选 ${products.length.toLocaleString('zh-CN')} 个产品`}
@@ -161,90 +162,94 @@ export function BatchExportDialog({
         </>
       }
     >
-      <div className="batch-content">
-        <ExportLayoutSettings value={layout} onChange={onLayoutChange} disabled={running} />
-        <ExportImageSize
-          project={project}
-          productId={products[0]?.id ?? ''}
-          layout={layout}
-          firstOnly
-        />
-        <button
-          className="button outline directory-csv"
-          disabled={running}
-          onClick={() =>
-            download(productDirectoryCsv(products), '产品目录.csv', 'text/csv;charset=utf-8')
-          }
-        >
-          <ArrowDownToLine size={16} />
-          仅下载已选产品目录 CSV
-        </button>
-        <fieldset disabled={running} className="batch-formats">
-          <legend>产品结构格式</legend>
-          {(['svg', 'text', 'png'] as const).map((kind) => (
-            <label key={kind}>
-              <input
-                type="radio"
-                name="batch-format"
-                value={kind}
-                checked={format === kind}
-                onChange={() => setFormat(kind)}
-              />
-              {kind === 'svg' ? 'SVG 矢量图' : kind === 'text' ? '缩进文本' : 'PNG 图片'}
-            </label>
-          ))}
-        </fieldset>
-        <p className="batch-note">
-          ZIP 包含每个产品的结构文件、目录 CSV 和导出结果。较大任务按约 32 MB
-          原始文件大小分包；下载当前包后继续下一包，单个产品文件不拆分。
-        </p>
-        {format === 'png' && (
-          <p className="batch-note">
-            PNG 按产品逐个生成，耗时比 SVG 和文本更长；大图会按现有图片尺寸上限缩放。
-          </p>
-        )}
-        {progress && (
-          <div className="batch-progress" role="status">
-            <strong>
-              {phase === 'ready'
-                ? `第 ${progress.part} 包已准备好`
-                : progress.phase === 'packing' && running
-                  ? `正在打包第 ${progress.part} 包…`
-                  : `已处理 ${progress.done.toLocaleString('zh-CN')} / ${progress.total.toLocaleString('zh-CN')}`}
-            </strong>
-            <progress max={progress.total} value={progress.done} aria-label="批量导出进度" />
-            <span>
-              成功 {progress.success} 项，失败 {progress.failed} 项
-            </span>
-          </div>
-        )}
-        {archive && (
+      <ExportWorkspace
+        project={project}
+        productId={previewId}
+        layout={layout}
+        onLayoutChange={onLayoutChange}
+        disabled={running}
+        previewHeader={
+          <BatchPreviewPicker products={products} productId={previewId} onChange={setPreviewId} />
+        }
+      >
+        <div className="batch-content">
           <button
-            ref={downloadButton}
-            className="button primary archive-download"
-            onClick={saveArchive}
+            className="button outline directory-csv"
+            disabled={running}
+            onClick={() =>
+              download(productDirectoryCsv(products), '产品目录.csv', 'text/csv;charset=utf-8')
+            }
           >
             <ArrowDownToLine size={16} />
-            {archive.last ? '下载 ZIP' : `下载第 ${archive.part} 包并继续`}
+            仅下载已选产品目录 CSV
           </button>
-        )}
-        {phase === 'done' && summary && (
-          <p className="batch-result" role="status">
-            导出完成：成功 {summary.success} 项，失败 {summary.failed} 项，共下载 {summary.parts} 个
-            ZIP。{summary.failed > 0 && '失败原因见包内导出结果。'}
+          <fieldset disabled={running} className="batch-formats">
+            <legend>产品结构格式</legend>
+            {(['svg', 'text', 'png'] as const).map((kind) => (
+              <label key={kind}>
+                <input
+                  type="radio"
+                  name="batch-format"
+                  value={kind}
+                  checked={format === kind}
+                  onChange={() => setFormat(kind)}
+                />
+                {kind === 'svg' ? 'SVG 矢量图' : kind === 'text' ? '缩进文本' : 'PNG 图片'}
+              </label>
+            ))}
+          </fieldset>
+          <p className="batch-note">
+            ZIP 包含每个产品的结构文件、目录 CSV 和导出结果。较大任务按约 32 MB
+            原始文件大小分包；下载当前包后继续下一包，单个产品文件不拆分。
           </p>
-        )}
-        {phase === 'cancelled' && (
-          <p className="batch-result" role="status">
-            已取消导出。此前下载的 ZIP 仍可使用，尚未下载的内容已释放。
-          </p>
-        )}
-        {error && (
-          <p className="batch-error" role="alert">
-            {error}
-          </p>
-        )}
-      </div>
+          {format === 'png' && (
+            <p className="batch-note">
+              PNG 按产品逐个生成，耗时比 SVG 和文本更长；大图会按现有图片尺寸上限缩放。
+            </p>
+          )}
+          {progress && (
+            <div className="batch-progress" role="status">
+              <strong>
+                {phase === 'ready'
+                  ? `第 ${progress.part} 包已准备好`
+                  : progress.phase === 'packing' && running
+                    ? `正在打包第 ${progress.part} 包…`
+                    : `已处理 ${progress.done.toLocaleString('zh-CN')} / ${progress.total.toLocaleString('zh-CN')}`}
+              </strong>
+              <progress max={progress.total} value={progress.done} aria-label="批量导出进度" />
+              <span>
+                成功 {progress.success} 项，失败 {progress.failed} 项
+              </span>
+            </div>
+          )}
+          {archive && (
+            <button
+              ref={downloadButton}
+              className="button primary archive-download"
+              onClick={saveArchive}
+            >
+              <ArrowDownToLine size={16} />
+              {archive.last ? '下载 ZIP' : `下载第 ${archive.part} 包并继续`}
+            </button>
+          )}
+          {phase === 'done' && summary && (
+            <p className="batch-result" role="status">
+              导出完成：成功 {summary.success} 项，失败 {summary.failed} 项，共下载 {summary.parts}{' '}
+              个 ZIP。{summary.failed > 0 && '失败原因见包内导出结果。'}
+            </p>
+          )}
+          {phase === 'cancelled' && (
+            <p className="batch-result" role="status">
+              已取消导出。此前下载的 ZIP 仍可使用，尚未下载的内容已释放。
+            </p>
+          )}
+          {error && (
+            <p className="batch-error" role="alert">
+              {error}
+            </p>
+          )}
+        </div>
+      </ExportWorkspace>
     </Modal>
   );
 }

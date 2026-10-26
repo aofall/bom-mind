@@ -29,6 +29,7 @@ import {
   Plus,
   Search,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   Upload,
   X,
@@ -46,6 +47,7 @@ import { download, nodeKind, safeFileName, visibleNodeIds } from './core/export'
 import { renderProductFile, type ProductExportFormat } from './core/product-export';
 import { countMappedFields } from './core/mapping';
 import { useExportLayout } from './hooks/useExportLayout';
+import { ExportLayoutSettings } from './components/ExportLayoutSettings';
 import { makeDemo } from './core/demo';
 import { loadRecent, saveRecent } from './core/storage';
 import {
@@ -94,6 +96,7 @@ function App() {
   const [showExport, setShowExport] = useState(false);
   const [exportFull, setExportFull] = useState(true);
   const [exportLayout, setExportLayout] = useExportLayout();
+  const [showLayout, setShowLayout] = useState(false);
   const [showIssues, setShowIssues] = useState(false);
   const [issueScope, setIssueScope] = useState<'all' | 'product'>('product');
   const [help, setHelp] = useState(false);
@@ -115,6 +118,7 @@ function App() {
     setLeftOpen(false);
   }, []);
   const closeOverlays = useCallback(() => {
+    setShowLayout(false);
     setShowBatch(false);
     setShowExport(false);
     setShowIssues(false);
@@ -494,6 +498,35 @@ function App() {
         </button>
         <div className="header-divider" />
         <span className="header-context">从产品，看见每一层组成</span>
+        {project && (
+          <div className="header-project-info" aria-label="当前导入文件与统计">
+            <div className="header-divider" />
+            <div className="source-file">
+              <FileSpreadsheet size={17} />
+              <div
+                title={`${project.source.fileName} / ${project.source.sheetName} / ${project.source.demo ? '演示项目 · 虚构数据' : '按原始行序解析'}`}
+              >
+                <strong title={project.source.fileName}>{project.source.fileName}</strong>
+                <span>
+                  {project.source.sheetName}
+                  <i />
+                  {project.source.demo ? '演示项目 · 虚构数据' : '按原始行序解析'}
+                </span>
+              </div>
+            </div>
+            <div className="project-metrics">
+              <span>
+                <b>{number(project.stats.products)}</b> 产品
+              </span>
+              <span>
+                <b>{number(project.stats.records)}</b> 明细
+              </span>
+              <span>
+                <b>{project.stats.maxDepth}</b> 级材料
+              </span>
+            </div>{' '}
+          </div>
+        )}
         <div className="header-actions">
           <span className="local-status">
             <span className="status-dot" />
@@ -629,27 +662,40 @@ function App() {
       ) : (
         <>
           <div className="project-bar">
-            <div className="source-file">
-              <FileSpreadsheet size={17} />
-              <div>
-                <strong title={project.source.fileName}>{project.source.fileName}</strong>
-                <span>
-                  {project.source.sheetName}
-                  <i />
-                  {project.source.demo ? '演示项目 · 虚构数据' : '按原始行序解析'}
-                </span>
+            <div className="canvas-heading">
+              <div className="current-product-copy">
+                <div className="canvas-kicker">
+                  <button
+                    className="icon-button mobile-action"
+                    aria-label="打开产品目录"
+                    onClick={() => setLeftOpen(true)}
+                  >
+                    <FolderOpen size={16} />
+                  </button>
+                  <span className="product-context-label">产品结构</span>
+                  <ChevronRight size={13} />
+                  <span className="current-product-code" title={product?.code}>
+                    {product?.code}
+                  </span>
+                  <ChevronRight size={13} />
+                  <strong className="current-product-name" title={product?.name}>
+                    {product?.name}
+                  </strong>
+                  <span className="current-product-spec" title={product?.spec || '产品规格未提供'}>
+                    · {product?.spec || '产品规格未提供'}
+                  </span>
+                  <span className="root-badge">
+                    产品根节点 + {product?.maxDepth} 级材料 · {product?.count} 个材料节点
+                  </span>
+                </div>
               </div>
-            </div>
-            <div className="project-metrics">
-              <span>
-                <b>{number(project.stats.products)}</b> 产品
-              </span>
-              <span>
-                <b>{number(project.stats.records)}</b> 明细
-              </span>
-              <span>
-                <b>{project.stats.maxDepth}</b> 级材料
-              </span>
+              <button
+                className="icon-button mobile-action"
+                aria-label="查看节点详情"
+                onClick={() => setRightOpen(true)}
+              >
+                <ListTree size={20} />
+              </button>
             </div>
             <button
               className={`issue-summary ${project.issues.length ? 'has-issues' : ''}`}
@@ -700,39 +746,6 @@ function App() {
               onClose={() => setLeftOpen(false)}
             />
             <section className="canvas-panel">
-              <div className="canvas-heading">
-                <div>
-                  <div className="canvas-kicker">
-                    <button
-                      className="icon-button mobile-action"
-                      aria-label="打开产品目录"
-                      onClick={() => setLeftOpen(true)}
-                    >
-                      <FolderOpen size={16} />
-                    </button>
-                    <span>产品结构</span>
-                    <ChevronRight size={13} />
-                    <span>{product?.code}</span>
-                  </div>
-                  <h1>{product?.name}</h1>
-                  <p>
-                    {product?.spec || '产品规格未提供'}
-                    <span>·</span>
-                    {product?.count} 个材料节点
-                  </p>
-                </div>
-                <button
-                  className="icon-button mobile-action"
-                  aria-label="查看节点详情"
-                  onClick={() => setRightOpen(true)}
-                >
-                  <ListTree size={20} />
-                </button>
-                <span className="root-badge">
-                  <span />
-                  产品根节点 + {product?.maxDepth} 级材料
-                </span>
-              </div>
               <div className="canvas-toolbar">
                 <div className="view-tabs" role="group" aria-label="显示方式">
                   <button
@@ -744,7 +757,10 @@ function App() {
                   </button>
                   <button
                     className={view === 'outline' ? 'active' : ''}
-                    onClick={() => setView('outline')}
+                    onClick={() => {
+                      setView('outline');
+                      setShowLayout(false);
+                    }}
                   >
                     <ListTree size={15} />
                     文字树
@@ -771,6 +787,19 @@ function App() {
                   <option value="-1">全部展开</option>
                   <option value="0">全部收起</option>
                 </select>
+                <button
+                  type="button"
+                  className={`layout-toggle ${showLayout ? 'active' : ''}`}
+                  aria-expanded={showLayout}
+                  aria-controls="canvas-layout-panel"
+                  onClick={() => {
+                    setView('graph');
+                    setShowLayout(!showLayout);
+                  }}
+                >
+                  <SlidersHorizontal size={15} />
+                  排版设置
+                </button>
                 <div className="material-search search-field">
                   <Search size={14} />
                   <input
@@ -800,6 +829,26 @@ function App() {
                 </div>
               </div>
               <div className="canvas-body">
+                {showLayout && (
+                  <section
+                    className="canvas-layout-panel"
+                    id="canvas-layout-panel"
+                    aria-label="画布排版设置"
+                  >
+                    <div className="layout-panel-heading">
+                      <strong>排版设置</strong>
+                      <button
+                        type="button"
+                        className="icon-button"
+                        aria-label="关闭排版设置"
+                        onClick={() => setShowLayout(false)}
+                      >
+                        <X size={17} />
+                      </button>
+                    </div>
+                    <ExportLayoutSettings value={exportLayout} onChange={setExportLayout} />
+                  </section>
+                )}
                 {view === 'graph' ? (
                   <BomGraph
                     key={productId}
@@ -807,6 +856,7 @@ function App() {
                     project={project}
                     rootId={productId}
                     collapsed={collapsed}
+                    layout={exportLayout}
                     selected={selectedId}
                     matches={matchedIds}
                     onSelect={selectNode}
@@ -1122,7 +1172,6 @@ function App() {
           collapsed={collapsed}
           layout={exportLayout}
           onLayoutChange={setExportLayout}
-          sampleTitle={selected?.name}
           full={exportFull}
           onFullChange={setExportFull}
           onExport={exportFile}

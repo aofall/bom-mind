@@ -11,8 +11,7 @@ import { Modal } from './Modal';
 import type { ProductExportFormat } from '../core/product-export';
 import type { ExportLayoutOptions } from '../core/export-layout';
 import type { Project } from '../core/types';
-import { ExportLayoutSettings } from './ExportLayoutSettings';
-import { ExportImageSize } from './ExportImageSize';
+import { ExportWorkspace } from './ExportWorkspace';
 
 interface Props {
   project: Project;
@@ -20,7 +19,6 @@ interface Props {
   collapsed: Set<string>;
   layout: ExportLayoutOptions;
   onLayoutChange: (value: ExportLayoutOptions) => void;
-  sampleTitle?: string;
   full: boolean;
   onFullChange: (full: boolean) => void;
   onExport: (kind: ProductExportFormat | 'json') => void;
@@ -48,7 +46,6 @@ export function ExportDialog({
   collapsed,
   layout,
   onLayoutChange,
-  sampleTitle,
   full,
   onFullChange,
   onExport,
@@ -56,7 +53,7 @@ export function ExportDialog({
 }: Props) {
   return (
     <Modal
-      className="export-modal"
+      className="export-modal wide-export-modal"
       label="导出项目"
       eyebrow="保存与分享"
       title="把结构带走。"
@@ -64,39 +61,52 @@ export function ExportDialog({
       onClose={onClose}
       description="图像和文本导出当前产品；JSON 保存全部产品。"
     >
-      <div className="export-scope">
-        <span>图片内容</span>
-        <label>
-          <input type="radio" checked={full} onChange={() => onFullChange(true)} />
-          完整产品结构
-        </label>
-        <label>
-          <input type="radio" checked={!full} onChange={() => onFullChange(false)} />
-          当前展开结构
-        </label>
-      </div>
-      <ExportLayoutSettings value={layout} onChange={onLayoutChange} sampleTitle={sampleTitle} />
-      <ExportImageSize
+      <ExportWorkspace
         project={project}
         productId={productId}
-        full={full}
-        collapsed={collapsed}
         layout={layout}
-      />
-      <div className="export-options">
-        {formats.map(({ kind, icon: Icon, title, description }) => (
-          <button key={kind} onClick={() => void onExport(kind)}>
-            <span className="export-icon">
-              <Icon size={21} />
-            </span>
-            <div>
-              <strong>{title}</strong>
-              <span>{description}</span>
-            </div>
-            <ArrowUpRight size={17} />
-          </button>
-        ))}
-      </div>
+        onLayoutChange={onLayoutChange}
+        collapsed={collapsed}
+        full={full}
+        previewHeader={
+          <div className="export-scope">
+            <span>图片内容</span>
+            <label>
+              <input
+                type="radio"
+                name="export-scope"
+                checked={full}
+                onChange={() => onFullChange(true)}
+              />
+              完整产品结构
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="export-scope"
+                checked={!full}
+                onChange={() => onFullChange(false)}
+              />
+              当前展开结构
+            </label>
+          </div>
+        }
+      >
+        <div className="export-options">
+          {formats.map(({ kind, icon: Icon, title, description }) => (
+            <button key={kind} onClick={() => void onExport(kind)}>
+              <span className="export-icon">
+                <Icon size={21} />
+              </span>
+              <div>
+                <strong>{title}</strong>
+                <span>{description}</span>
+              </div>
+              <ArrowUpRight size={17} />
+            </button>
+          ))}
+        </div>
+      </ExportWorkspace>
       <div className="modal-note">
         <ShieldCheck size={15} />
         下载到本地，不会自动共享给其他人。

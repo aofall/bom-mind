@@ -25,7 +25,6 @@
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.14.22",
-    "echarts": "^6.0.0",
     "jszip": "^3.10.2",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",

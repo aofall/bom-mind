@@ -1,12 +1,8 @@
 import {
   EXPORT_FONT_FAMILY,
-  createTextMeasurer,
-  measureTextCard,
-  normalizeExportLayout,
   type ExportDiagram,
-  type ExportLayoutOptions,
   type TextBlock,
-  type TextCard,
+  type PositionedCard,
 } from './export-layout';
 
 const escapeXml = (value: string) =>
@@ -23,8 +19,12 @@ function textSvg(block: TextBlock, x: number, y: number, color: string, role: st
     .join('');
   return `<text data-field="${role}" xml:space="preserve" fill="${color}" font-size="${block.fontSize}" font-weight="${block.weight}">${lines}</text>`;
 }
-function cardSvg(card: TextCard, x: number, y: number, root: boolean, missingQuantity: boolean) {
-  const fill = root ? '#153d34' : '#ffffff';
+function cardSvg(card: PositionedCard) {
+  const { x, y, node } = card;
+  const root = node.level === 0;
+  const missingQuantity = node.quantity == null && !root;
+  const branch = node.children.length > 0;
+  const fill = root ? '#153d34' : branch ? '#f0f5eb' : '#ffffff';
   const border = root ? '#153d34' : '#d4dfd9';
   const colors = [
     root ? '#ffffff' : '#243b33',
@@ -64,7 +64,7 @@ export function renderExportDiagram(diagram: ExportDiagram): string {
   const nodes = cards
     .map(
       (card) =>
-        `<g data-node-id="${escapeXml(card.node.id)}"><title>${escapeXml(`${card.node.name} / ${card.node.code} / ${card.node.spec}`)}</title>${cardSvg(card, card.x, card.y, card.node.level === 0, card.node.quantity == null && card.node.level > 0)}</g>`,
+        `<g data-node-id="${escapeXml(card.node.id)}"><title>${escapeXml(`${card.node.name} / ${card.node.code} / ${card.node.spec}`)}</title>${cardSvg(card)}</g>`,
     )
     .join('');
   return [
@@ -79,12 +79,4 @@ export function renderExportDiagram(diagram: ExportDiagram): string {
     textSvg(footer.block, footer.x, footer.y, '#77867b', 'source'),
     '</g></svg>',
   ].join('');
-}
-export function renderLayoutPreview(value: ExportLayoutOptions, title: string): string {
-  const card = measureTextCard(
-    { title, subtitle: '规格 / 材料代码', quantity: '原表数量 1' },
-    normalizeExportLayout(value),
-    createTextMeasurer(),
-  );
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${card.width + 2}" height="${card.height + 2}" viewBox="0 0 ${card.width + 2} ${card.height + 2}"><g font-family="${EXPORT_FONT_FAMILY}">${cardSvg(card, 1, 1, false, false)}</g></svg>`;
 }
