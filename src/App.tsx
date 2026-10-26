@@ -43,7 +43,7 @@ import { ImportDialog } from './components/ImportDialog';
 import { ExportDialog } from './components/ExportDialog';
 import { IssuesDialog } from './components/IssuesDialog';
 import { HelpDialog } from './components/HelpDialog';
-import ParserWorker from './worker?worker';
+import { createParserWorker } from '#bom-workers';
 import { ancestry, deserializeProject, quantityLabel, serializeProject } from './core/parser';
 import { download, nodeKind, safeFileName, visibleNodeIds } from './core/export';
 import { renderProductFile, type ProductExportFormat } from './core/product-export';
@@ -125,6 +125,7 @@ function App() {
 
   const fileInput = useRef<HTMLInputElement>(null);
   const worker = useRef<Worker | null>(null);
+  const importJob = useRef<AbortController | null>(null);
   const graph = useRef<GraphHandle>(null);
   const tableView = useRef<TableHandle>(null);
   const singleExport = useRef<AbortController | null>(null);
@@ -195,6 +196,8 @@ function App() {
   }, [project, remember]);
   useEffect(
     () => () => {
+      revision.current++;
+      importJob.current?.abort();
       worker.current?.terminate();
       singleExport.current?.abort();
     },
@@ -303,6 +306,8 @@ function App() {
     });
   }, [project, materialSearch, matchedIds]);
   function cancelImport() {
+    importJob.current?.abort();
+    importJob.current = null;
     singleExport.current?.abort();
     singleExport.current = null;
     revision.current++;
@@ -349,13 +354,21 @@ function App() {
         throw new Error('请选择 .xls、.xlsx 或 BOM Mind 导出的 .json 文件');
       }
       setBusy('正在读取文件…');
-      const parser = new ParserWorker();
+      const job = new AbortController();
+      importJob.current = job;
+      const parser = await createParserWorker(job.signal);
+      if (requestRevision !== revision.current) {
+        parser.terminate();
+        return;
+      }
       worker.current = parser;
       parser.onerror = () => {
         if (requestRevision !== revision.current) return;
         setError('文件读取失败，请检查文件格式后重新导入');
         setBusy('');
         parser.terminate();
+        worker.current = null;
+        importJob.current = null;
       };
       parser.onmessage = (event) => {
         if (requestRevision !== revision.current) return;
@@ -395,6 +408,7 @@ function App() {
           );
           parser.terminate();
           worker.current = null;
+          importJob.current = null;
         }
       };
       const buffer = await file.arrayBuffer();
@@ -402,6 +416,10 @@ function App() {
       parser.postMessage({ type: 'open', payload: { buffer } }, [buffer]);
     } catch (e) {
       if (requestRevision !== revision.current) return;
+      importJob.current?.abort();
+      importJob.current = null;
+      worker.current?.terminate();
+      worker.current = null;
       setError(e instanceof Error ? e.message : '文件读取失败');
       setBusy('');
     }

@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { legacyWorkerAssets } from './scripts/legacy-worker-assets';
 
 // Vite's HTML entry is emitted as a module even when Rollup outputs an IIFE.
 // Run after HTML generation so file:// can load the resulting classic script.
@@ -28,21 +29,17 @@ export default defineConfig(({ mode }) => {
   const legacy = mode === 'legacy';
   return {
     base: './',
-    plugins: [react(), ...(legacy ? [classicHtmlEntry()] : [])],
+    plugins: [react(), ...(legacy ? [legacyWorkerAssets(), classicHtmlEntry()] : [])],
     resolve: {
-      // Keep the web build's separate Worker; embed it only in the file:// build.
-      alias: legacy
-        ? [
-            {
-              find: './worker?worker',
-              replacement: `${fileURLToPath(new URL('./src/worker.ts', import.meta.url))}?worker&inline`,
-            },
-            {
-              find: '../table-export.worker?worker',
-              replacement: `${fileURLToPath(new URL('./src/table-export.worker.ts', import.meta.url))}?worker&inline`,
-            },
-          ]
-        : [],
+      // Only legacy uses classic script carriers. Web keeps Vite's module Workers.
+      alias: {
+        '#bom-workers': fileURLToPath(
+          new URL(
+            legacy ? './src/core/legacy-worker-factory.ts' : './src/core/worker-factory.ts',
+            import.meta.url,
+          ),
+        ),
+      },
     },
     worker: { format: legacy ? 'iife' : 'es' },
     optimizeDeps: { include: ['xlsx'] },
