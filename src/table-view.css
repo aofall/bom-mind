@@ -1,0 +1,156 @@
+.table-options-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 9px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  color: #61745e;
+  font-size: 12px;
+}
+.table-options-bar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.table-options-bar .button {
+  margin-left: auto;
+}
+.table-field-options {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0;
+  font-size: 12px;
+}
+.table-field-options label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.table-settings {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.hierarchy-table-viewport {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  scroll-padding-top: 48px;
+  padding: 0 0 40px;
+}
+.hierarchy-table {
+  border-spacing: 0;
+  table-layout: fixed;
+  font-family: 'Microsoft YaHei', 'PingFang SC', Arial, sans-serif;
+  color: #243b33;
+}
+.hierarchy-table caption {
+  text-align: left;
+  padding: 18px 16px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.hierarchy-table caption > * {
+  display: block;
+}
+.hierarchy-table caption small {
+  color: #6a7c60;
+  font-size: 11px;
+}
+.hierarchy-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: #fff;
+  background: #315d43;
+  padding: 10px;
+  border-right: 1px solid #76947d;
+  font-weight: 500;
+}
+.hierarchy-table td {
+  border-right: 1px solid #d7e1da;
+  border-bottom: 1px solid #d7e1da;
+  background: #fff;
+  vertical-align: top;
+  padding: 0;
+}
+.hierarchy-table .branch {
+  background: #f0f5eb;
+}
+.hierarchy-table .match {
+  background: #fff7df;
+  box-shadow: inset 0 0 0 2px #c28c28;
+}
+.hierarchy-table .selected {
+  box-shadow: inset 0 0 0 2px #2b755a;
+}
+.table-node {
+  display: block;
+  padding: 12px 16px;
+  width: 100%;
+  text-align: left;
+}
+.table-node > span {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.table-node-name {
+  font-weight: 600;
+}
+.table-node-meta {
+  color: #61745e;
+}
+.table-branch-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 16px 10px;
+  font-size: 11px;
+  color: #315d43;
+}
+.hierarchy-table .table-empty,
+.table-empty-message {
+  vertical-align: middle;
+  color: #8d9b8e;
+  text-align: center;
+  padding: 16px;
+}
+.table-preview-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 12px;
+}
+.table-preview-tabs button {
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+.table-preview-tabs .active {
+  background: #e6efdf;
+}
+@media (max-width: 720px) {
+  .canvas-toolbar .view-tabs button {
+    padding: 6px 5px;
+    gap: 3px;
+  }
+  .canvas-toolbar .view-tabs button svg,
+  .canvas-toolbar .layout-toggle > span {
+    display: none;
+  }
+  .table-options-bar {
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 11px;
+  }
+  .table-options-bar .button {
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+}
