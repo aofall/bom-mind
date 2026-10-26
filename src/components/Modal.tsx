@@ -1,4 +1,5 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 import { X } from 'lucide-react';
 
 interface Props {
@@ -25,54 +26,7 @@ export function Modal({
   children,
 }: Props) {
   const dialog = useRef<HTMLElement>(null);
-  const close = useRef(onClose);
-  useEffect(() => {
-    close.current = onClose;
-  }, [onClose]);
-  useEffect(() => {
-    const element = dialog.current;
-    if (!element) return;
-    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const focusable = () =>
-      Array.from(
-        element.querySelectorAll<HTMLElement>(
-          'a[href], button:not(:disabled), input:not(:disabled):not([type="hidden"]), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
-        ),
-      ).filter(
-        (item) =>
-          item.getClientRects().length > 0 && getComputedStyle(item).visibility !== 'hidden',
-      );
-    (focusable()[0] ?? element).focus();
-    const handleKey = (event: KeyboardEvent) => {
-      const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
-      if (dialogs[dialogs.length - 1] !== element) return;
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        event.stopPropagation();
-        close.current();
-        return;
-      }
-      if (event.key !== 'Tab') return;
-      const items = focusable();
-      const first = items[0] ?? element;
-      const last = items.at(-1) ?? element;
-      if (!element.contains(document.activeElement)) {
-        event.preventDefault();
-        first.focus();
-      } else if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('keydown', handleKey);
-      if (previous?.isConnected && previous.getClientRects().length > 0) previous.focus();
-    };
-  }, []);
+  useDialogFocus(dialog, true, onClose);
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <section

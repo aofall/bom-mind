@@ -53,12 +53,14 @@ export const DiagramViewport = forwardRef<DiagramHandle, Props>(function Diagram
   const drag = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
   const suppressClick = useRef(false);
   const selectedId = useRef(selected);
+  const scaleRef = useRef(scale);
   const focusedId = useRef<string | null>(null);
   // The renderer escapes every source string before it reaches the SVG markup.
   const svg = useMemo(() => renderExportDiagram(diagram), [diagram]);
   useLayoutEffect(() => {
     selectedId.current = selected;
-  }, [selected]);
+    scaleRef.current = scale;
+  }, [selected, scale]);
 
   const fitScale = useCallback(() => {
     const element = viewport.current;
@@ -106,16 +108,44 @@ export const DiagramViewport = forwardRef<DiagramHandle, Props>(function Diagram
   useLayoutEffect(() => {
     const element = viewport.current;
     if (!element) return;
+    let size = { width: element.clientWidth, height: element.clientHeight };
     const update = () => {
       if (autoFit.current) {
         setScale(fitScale());
+      } else if (size.width !== element.clientWidth || size.height !== element.clientHeight) {
+        const card = diagram.cards.find((item) => item.node.id === selectedId.current);
+        if (card) {
+          const zoom = scaleRef.current;
+          const centerX = (card.x + card.width / 2) * zoom;
+          const centerY = (card.y + card.height / 2) * zoom;
+          const oldCenterX = centerX + Math.max(0, (size.width - diagram.width * zoom) / 2);
+          const wasVisible =
+            oldCenterX >= element.scrollLeft &&
+            oldCenterX <= element.scrollLeft + size.width &&
+            centerY >= element.scrollTop &&
+            centerY <= element.scrollTop + size.height;
+          if (wasVisible) {
+            const newCenterX =
+              centerX + Math.max(0, (element.clientWidth - diagram.width * zoom) / 2);
+            const left = Math.max(
+              newCenterX - element.clientWidth + 24,
+              Math.min(element.scrollLeft, newCenterX - 24),
+            );
+            const top = Math.max(
+              centerY - element.clientHeight + 24,
+              Math.min(element.scrollTop, centerY - 24),
+            );
+            element.scrollTo(left, top);
+          }
+        }
       }
+      size = { width: element.clientWidth, height: element.clientHeight };
     };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [fitScale]);
+  }, [fitScale, diagram]);
 
   useLayoutEffect(() => {
     const element = viewport.current;

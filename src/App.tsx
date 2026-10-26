@@ -27,6 +27,7 @@ import {
   Maximize2,
   Minus,
   Plus,
+  PanelRight,
   Search,
   ShieldCheck,
   SlidersHorizontal,
@@ -47,6 +48,8 @@ import { download, nodeKind, safeFileName, visibleNodeIds } from './core/export'
 import { renderProductFile, type ProductExportFormat } from './core/product-export';
 import { countMappedFields } from './core/mapping';
 import { useExportLayout } from './hooks/useExportLayout';
+import { useNodeDetails } from './hooks/useNodeDetails';
+import { NodeDetailsPanel } from './components/NodeDetailsPanel';
 import { ExportLayoutSettings } from './components/ExportLayoutSettings';
 import { makeDemo } from './core/demo';
 import { loadRecent, saveRecent } from './core/storage';
@@ -101,12 +104,21 @@ function App() {
   const [issueScope, setIssueScope] = useState<'all' | 'product'>('product');
   const [help, setHelp] = useState(false);
   const [leftOpen, setLeftOpen] = useState(false);
-  const [rightOpen, setRightOpen] = useState(false);
+  const {
+    isDesktop,
+    expanded: detailsExpanded,
+    collapsed: detailsCollapsed,
+    open: openDetails,
+    close: closeDetails,
+    toggle: toggleDetails,
+    closeDrawer: closeDetailsDrawer,
+  } = useNodeDetails();
   const [rawIssue, setRawIssue] = useState<Issue | null>(null);
 
   const fileInput = useRef<HTMLInputElement>(null);
   const worker = useRef<Worker | null>(null);
   const graph = useRef<GraphHandle>(null);
+  const detailsToggle = useRef<HTMLButtonElement>(null);
   const revision = useRef(0);
 
   const activateProduct = useCallback((next: Project, id: string) => {
@@ -124,8 +136,8 @@ function App() {
     setShowIssues(false);
     setHelp(false);
     setLeftOpen(false);
-    setRightOpen(false);
-  }, []);
+    closeDetailsDrawer();
+  }, [closeDetailsDrawer]);
   const applyProject = useCallback(
     (next: Project) => {
       const first = next.products[0]?.id ?? '';
@@ -443,6 +455,7 @@ function App() {
     }
   }
   function openIssue(issue: Issue) {
+    setLeftOpen(false);
     if (issue.productId) {
       setProductId(issue.productId);
       setCollapsed(initialCollapse(project!, issue.productId));
@@ -454,7 +467,7 @@ function App() {
       setSelectedId(issue.productId ?? '');
     }
     setShowIssues(false);
-    setRightOpen(true);
+    openDetails();
   }
   return (
     <div
@@ -689,13 +702,6 @@ function App() {
                   </span>
                 </div>
               </div>
-              <button
-                className="icon-button mobile-action"
-                aria-label="查看节点详情"
-                onClick={() => setRightOpen(true)}
-              >
-                <ListTree size={20} />
-              </button>
             </div>
             <button
               className={`issue-summary ${project.issues.length ? 'has-issues' : ''}`}
@@ -731,7 +737,7 @@ function App() {
               <ChevronDown size={13} />
             </button>
           </div>
-          <main className="workspace">
+          <main className={`workspace ${detailsCollapsed ? 'details-collapsed' : ''}`}>
             <ProductDirectory
               products={products}
               allProducts={project.products}
@@ -799,6 +805,22 @@ function App() {
                 >
                   <SlidersHorizontal size={15} />
                   排版设置
+                </button>
+                <button
+                  ref={detailsToggle}
+                  type="button"
+                  className={`details-toggle ${detailsExpanded ? 'active' : ''}`}
+                  aria-label="节点详情"
+                  aria-expanded={detailsExpanded}
+                  aria-controls="node-details-panel"
+                  title={detailsExpanded ? '收起节点详情' : '展开节点详情'}
+                  onClick={() => {
+                    setLeftOpen(false);
+                    toggleDetails();
+                  }}
+                >
+                  <PanelRight size={15} />
+                  <span>节点详情</span>
                 </button>
                 <div className="material-search search-field">
                   <Search size={14} />
@@ -896,7 +918,6 @@ function App() {
                             className="outline-content"
                             onClick={() => {
                               selectNode(id);
-                              setRightOpen(true);
                             }}
                           >
                             <span className={`outline-node-icon ${!node.level ? 'root' : ''}`}>
@@ -946,8 +967,8 @@ function App() {
                 )}
                 <div className="canvas-hint">
                   {view === 'graph'
-                    ? '点击节点查看详情与展开 · 拖动画布平移'
-                    : '展开箭头查看下级 · 点击材料查看详情'}
+                    ? '点击节点选中与展开 · 拖动画布平移'
+                    : '展开箭头查看下级 · “节点详情”查看信息'}
                 </div>
               </div>
               <footer className="canvas-footer">
@@ -964,18 +985,12 @@ function App() {
                 </span>
               </footer>
             </section>
-            <aside className={`detail-panel ${rightOpen ? 'mobile-open' : ''}`}>
-              <div className="detail-heading">
-                <span>节点详情</span>
-                <button
-                  className="icon-button mobile-close"
-                  aria-label="关闭节点详情"
-                  onClick={() => setRightOpen(false)}
-                >
-                  <X size={17} />
-                </button>
-                <span className="small-muted desktop-only">可追溯至原表</span>
-              </div>
+            <NodeDetailsPanel
+              expanded={detailsExpanded}
+              isDesktop={isDesktop}
+              onClose={closeDetails}
+              trigger={detailsToggle}
+            >
               {rawIssue ? (
                 <>
                   <div className="detail-main">
@@ -1109,7 +1124,7 @@ function App() {
                   尚未进行单位换算与累计用量计算。
                 </p>
               </div>
-            </aside>
+            </NodeDetailsPanel>
           </main>
         </>
       )}
